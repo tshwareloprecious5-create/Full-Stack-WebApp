@@ -1,0 +1,170 @@
+import { NextResponse } from "next/server"
+import { readUploadedFile, readUploadedFiles, isStagedReference } from "@/lib/staged-uploads"
+import { checkUploadLimits, UPLOAD_LIMITS } from "@/lib/upload-limits"
+import { logUserAction } from "@/lib/activity-log"
+import { createClient } from "@/lib/supabase/server"
+import { getOrgContext, roleAtLeast, insufficientRoleMessage } from "@/lib/organization-access"
+
+export async function GET() {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ message: "Authentication required." }, { status: 401 })
+
+    const orgCtx = await getOrgContext<{ id: any }>(supabase, user.id, "id")
+    const org = orgCtx?.organization ?? null
+    if (!org) return NextResponse.json({ message: "Organization profile not found." }, { status: 404 })
+
+    const { data, error } = await supabase
+      .from("impact_stories")
+      .select("id, title, content, author_role, image_url, video_url, created_at, need_id, status, rejection_reason")
+      .eq("organization_id", org.id)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      // Table might not exist yet
+      return NextResponse.json({ stories: [] })
+    }
+
+    const storyIds = (data || []).map((s) => s.id)
+    const mediaByStory: Record<string, { id: string; media_type: string; url: string }[]> = {}
+    if (storyIds.length > 0) {
+      const { data: mediaRows } = await supabase
+        .from("impact_story_media")
+        .select("id, story_id, media_type, url, position")
+        .in("story_id", storyIds)
+        .order("position", { ascending: true })
+      for (const row of mediaRows || []) {
+        if (!mediaByStory[row.story_id]) mediaByStory[row.story_id] = []
+        mediaByStory[row.story_id].push({ id: row.id, media_type: row.media_type, url: row.url })
+      }
+    }
+
+    const stories = (data || []).map((s) => ({ ...s, media: mediaByStory[s.id] || [] }))
+    return NextResponse.json({ stories })
+  } catch (err: any) {
+    console.error("Get organization stories error:", err)
+    return NextResponse.json({ stories: [] })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ message: "Authentication required." }, { status: 401 })
+
+    const orgCtx = await getOrgContext<{ id: any; verification_status: any }>(supabase, user.id, "id, verification_status")
+    const org = orgCtx?.organization ?? null
+    if (orgCtx && !roleAtLeast(orgCtx.role, "coordinator")) return NextResponse.json({ message: insufficientRoleMessage(orgCtx.role, "coordinator") }, { status: 403 })
+    if (!org) return NextResponse.json({ message: "Organization access required." }, { status: 403 })
+
+    const contentType = request.headers.get("content-type") || ""
+    let title = ""
+    let content = ""
+    let authorRole = ""
+    let needId: string | null = null
+    let imageFiles: File[] = []
+    let videoUrls: string[] = []
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData()
+      title = String(formData.get("title") || "")
+      content = String(formData.get("content") || "")
+      authorRole = String(formData.get("author_role") || "")
+      needId = (formData.get("need_id") as string) || null
+      videoUrls = formData.getAll("video_urls").map((v) => String(v).trim()).filter(Boolean)
+      imageFiles = await readUploadedFiles(formData, "images")
+      // Singular fields kept for older callers; new clients send "images"/"video_urls".
+      const legacyFile = await readUploadedFile(formData, "image")
+      if (legacyFile instanceof File && legacyFile.size > 0) imageFiles.unshift(legacyFile)
+      { const uploadProblem = checkUploadLimits(imageFiles, UPLOAD_LIMITS.storyImages); if (uploadProblem) return NextResponse.json({ message: uploadProblem }, { status: 400 }) }
+      const legacyVideoUrl = String(formData.get("video_url") || "").trim()
+      if (legacyVideoUrl) videoUrls.unshift(legacyVideoUrl)
+    } else {
+      const body = await request.json()
+      title = body.title
+      content = body.content
+      authorRole = body.author_role
+      needId = body.need_id || null
+      if (body.video_url) videoUrls = [String(body.video_url).trim()]
+    }
+
+    if (!title || !content) {
+      return NextResponse.json({ message: "Title and story content are required." }, { status: 400 })
+    }
+
+    for (const url of videoUrls) {
+      try {
+        const parsed = new URL(url)
+        if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("bad protocol")
+      } catch {
+        return NextResponse.json({ message: `"${url}" isn't a valid video URL (e.g. a YouTube or Vimeo link).` }, { status: 400 })
+      }
+    }
+
+    const uploadedImages: { url: string }[] = []
+    for (const imageFile of imageFiles) {
+      try {
+        const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+        const storagePath = `${user.id}/${crypto.randomUUID()}-${safeName}`
+        const { error: uploadError } = await supabase.storage
+          .from("impact-media")
+          .upload(storagePath, imageFile, {
+            contentType: imageFile.type || "image/jpeg",
+            upsert: false,
+          })
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage.from("impact-media").getPublicUrl(storagePath)
+          if (publicUrlData?.publicUrl) uploadedImages.push({ url: publicUrlData.publicUrl })
+        }
+      } catch (uploadEx) {
+        console.warn("Story image upload warning:", uploadEx)
+      }
+    }
+
+    const { data: story, error } = await supabase
+      .from("impact_stories")
+      .insert({
+        organization_id: org.id,
+        need_id: needId,
+        title,
+        content,
+        author_role: authorRole || null,
+        image_url: uploadedImages[0]?.url || null,
+        video_url: videoUrls[0] || null,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Story insert error:", error.message)
+      return NextResponse.json({ message: error.message }, { status: 400 })
+    }
+
+    for (const image of uploadedImages) {
+      const { error: mediaError } = await supabase.rpc("add_impact_story_media", {
+        p_story_id: story.id,
+        p_media_type: "image",
+        p_url: image.url,
+        p_storage_path: null,
+      })
+      if (mediaError) console.warn("Story media record warning:", mediaError.message)
+    }
+    for (const url of videoUrls) {
+      const { error: mediaError } = await supabase.rpc("add_impact_story_media", {
+        p_story_id: story.id,
+        p_media_type: "video",
+        p_url: url,
+        p_storage_path: null,
+      })
+      if (mediaError) console.warn("Story media record warning:", mediaError.message)
+    }
+
+    await logUserAction(supabase, "Shared an impact story", story?.title)
+    return NextResponse.json({ success: true, story }, { status: 201 })
+  } catch (err: any) {
+    console.error("Post story exception:", err)
+    return NextResponse.json({ message: "Unable to publish story right now." }, { status: 503 })
+  }
+}

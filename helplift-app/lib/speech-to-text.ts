@@ -1,0 +1,142 @@
+"use client"
+
+import { useCallback, useEffect, useRef, useState } from "react"
+
+// The Web Speech API (SpeechRecognition) has no shipped TypeScript lib types
+// and is vendor-prefixed in Chrome/Edge/Safari; Firefox doesn't implement it
+// at all, so every caller must feature-detect before offering the mic button.
+export function isSpeechToTextSupported(): boolean {
+  if (typeof window === "undefined") return false
+  return !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+}
+
+// Appends a freshly-recognized chunk of speech to whatever the person already
+// typed, without a leading space on an empty field or a doubled space after one.
+export function appendSpeech(previous: string, chunk: string): string {
+  const trimmedChunk = chunk.trim()
+  if (!trimmedChunk) return previous
+  if (!previous.trim()) return trimmedChunk
+  return previous.replace(/\s+$/, "") + " " + trimmedChunk
+}
+
+// Drives one microphone button: starts/stops native speech recognition and
+// reports each finished phrase via onFinalText. Recognition runs entirely in
+// the browser (or the OS's on-device engine); HelpLift never receives audio.
+//
+// By default it keeps listening until stopped (dictating into a form field).
+// `continuous: false` stops by itself after the person pauses - one spoken
+// message, as Lifty's voice chat uses - and `onEnd` reports when listening
+// stopped and whether any speech was recognized.
+// Languages this browser couldn't listen in (e.g. Sesotho in Chrome), so the
+// microphone goes straight to the device's language next time this visit.
+const unsupportedLocales = new Set<string>()
+
+export function useSpeechToText(
+  onFinalText: (text: string) => void,
+  options: { continuous?: boolean; onEnd?: (heardSpeech: boolean) => void; lang?: string } = {}
+) {
+  const [listening, setListening] = useState(false)
+  const [error, setError] = useState("")
+  const recognitionRef = useRef<any>(null)
+  const cancelRecognitionRef = useRef<(() => void) | null>(null)
+  const onFinalTextRef = useRef(onFinalText)
+  onFinalTextRef.current = onFinalText
+  const onEndRef = useRef(options.onEnd)
+  onEndRef.current = options.onEnd
+  // The language to listen for (e.g. "zu-ZA"); the device's language when not set.
+  const langRef = useRef(options.lang)
+  langRef.current = options.lang
+  // A friendly note (not an error) - e.g. "listening in English instead".
+  const [notice, setNotice] = useState("")
+  const retryRef = useRef<() => void>(() => {})
+  const continuous = options.continuous ?? true
+
+  const stop = useCallback(() => {
+    const recognition = recognitionRef.current
+    if (!recognition) return
+    cancelRecognitionRef.current?.()
+    cancelRecognitionRef.current = null
+    recognitionRef.current = null
+    setListening(false)
+    try { recognition.abort() } catch {}
+  }, [])
+
+  const start = useCallback(() => {
+    setError("")
+    const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!Ctor) {
+      setError("Voice typing isn't supported in this browser.")
+      return
+    }
+    const recognition = new Ctor()
+    let heardSpeech = false
+    let cancelled = false
+    const deviceLang = typeof navigator !== "undefined" ? navigator.language || "en-US" : "en-US"
+    const wanted = langRef.current
+    const usingWanted = !!wanted && !unsupportedLocales.has(wanted)
+    recognition.lang = usingWanted ? wanted! : deviceLang
+    let fallBack = false
+    recognition.continuous = continuous
+    recognition.interimResults = false
+    recognition.onresult = (event: any) => {
+      if (cancelled) return
+      let text = ""
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) text += event.results[i][0].transcript
+      }
+      if (text.trim()) {
+        heardSpeech = true
+        onFinalTextRef.current(text)
+      }
+    }
+    recognition.onerror = (event: any) => {
+      if (cancelled) return
+      if (event.error === "no-speech" || event.error === "aborted") return
+      // The browser can't listen in the chosen language: switch to the
+      // device's language and start again, instead of failing.
+      if (usingWanted && event.error !== "not-allowed" && event.error !== "service-not-allowed") {
+        unsupportedLocales.add(wanted!)
+        fallBack = true
+        setNotice("Voice typing isn't available in that language in this browser, so I'm listening in your device's language instead. You can still type in any language.")
+        return
+      }
+      setError(
+        event.error === "not-allowed" || event.error === "service-not-allowed"
+          ? "Microphone access was blocked. Allow it in your browser to use voice typing."
+          : "Voice typing stopped unexpectedly. Please try again."
+      )
+      setListening(false)
+    }
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null
+        cancelRecognitionRef.current = null
+        setListening(false)
+      }
+      if (cancelled) return
+      if (fallBack) { retryRef.current(); return }
+      onEndRef.current?.(heardSpeech)
+    }
+    recognitionRef.current = recognition
+    cancelRecognitionRef.current = () => { cancelled = true }
+    try {
+      recognition.start()
+      setListening(true)
+    } catch {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null
+        cancelRecognitionRef.current = null
+      }
+    }
+  }, [continuous])
+
+  retryRef.current = start
+
+  // Stop listening if the component unmounts (dialog closed, navigated away) mid-session.
+  useEffect(() => () => {
+    cancelRecognitionRef.current?.()
+    try { recognitionRef.current?.abort() } catch {}
+  }, [])
+
+  return { listening, error, notice, start, stop }
+}

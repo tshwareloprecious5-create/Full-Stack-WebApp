@@ -1,0 +1,345 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
+import { Button } from "@/components/ui/button"
+import {
+  LogIn,
+  UserPlus,
+  Home,
+  ChevronLeft,
+  ShieldCheck,
+  HeartHandshake,
+  Gift,
+  Building2,
+  LayoutDashboard,
+  Menu,
+  X,
+} from "lucide-react"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+import { getSessionUser } from "@/lib/session-user"
+import { BrandLogo } from "@/components/brand-logo"
+
+const DASHBOARD_PATH: Record<string, string> = {
+  giver: "/givers-dashboard",
+  organization: "/organisation-dashboard",
+  admin: "/admin-dashboard",
+}
+
+// No theme switch here: visitors always get light mode, and members choose
+// their theme in Settings (see components/signed-out-light-theme.tsx).
+type ThemeMode = "light" | "dark" | "high-contrast" | "grayscale"
+
+export default function PublicNavbar() {
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const { theme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  // Signed-in state for this shared navbar - shown on /needs, /gift-library,
+  // /organizations, etc. Someone browsing those while already signed in
+  // otherwise saw "Log In" / "Register" with no indication they're already
+  // in - a link straight back to their dashboard instead.
+  const [dashboardPath, setDashboardPath] = useState<string | null>(null)
+  // Phones only: the ☰ menu holding the page links and account buttons.
+  const [menuOpen, setMenuOpen] = useState(false)
+  useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  useEffect(() => {
+    setMounted(true)
+    const supabase = createClient()
+    getSessionUser(supabase).then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+      if (profile?.role) setDashboardPath(DASHBOARD_PATH[profile.role] || null)
+    })
+  }, [])
+
+  const pathnameLower = pathname.toLowerCase()
+
+  const themeMode: ThemeMode = !mounted ? "dark" : ((resolvedTheme || theme) as ThemeMode) || "light"
+  const isDarkMode = themeMode === "dark" // kept for the rest of this file's existing checks
+
+  // Do not show the public navbar on any dashboard page
+  const isDashboardPage =
+    pathnameLower.startsWith("/dashboard") ||
+    pathnameLower.startsWith("/givers-dashboard") ||
+    pathnameLower.startsWith("/organisation-dashboard") ||
+    pathnameLower.startsWith("/admin-dashboard")
+
+  if (isDashboardPage) {
+    return null
+  }
+
+  const handleLoginRedirect = () => router.push("/login")
+
+  const isLoginPage = pathnameLower === "/login"
+  const isRegisterPage = pathnameLower === "/register"
+  const isVerifyPage = pathnameLower === "/verify-email"
+  const isForgotPasswordPage = pathnameLower === "/forgot-password"
+  const isNeedsPage = pathnameLower === "/needs"
+  const isGiftLibraryPage = pathnameLower === "/gift-library"
+  const isOrganizationsPage = pathnameLower === "/organizations"
+
+  const isAdminLoginPage = pathnameLower === "/admin-login"
+
+  const isAuthView =
+    isLoginPage || isRegisterPage || isVerifyPage || isForgotPasswordPage
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-[100] border-b border-border/40 bg-background/60 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <BrandLogo className="h-8 w-8 transition-transform group-hover:scale-105" />
+            <span className="font-black tracking-tighter text-xl text-foreground">
+              HelpLift
+            </span>
+          </Link>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-1">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={`rounded-lg px-4 gap-2 font-bold text-sm ${
+                isNeedsPage ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <Link href="/needs">
+                <HeartHandshake className="w-4 h-4" />
+                <span>Browse Needs</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={`rounded-lg px-4 gap-2 font-bold text-sm ${
+                isGiftLibraryPage ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <Link href="/gift-library">
+                <Gift className="w-4 h-4" />
+                <span>Gift Library</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={`rounded-lg px-4 gap-2 font-bold text-sm ${
+                isOrganizationsPage ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <Link href="/organizations">
+                <Building2 className="w-4 h-4" />
+                <span>Organizations</span>
+              </Link>
+            </Button>
+          </div>
+
+          {/* Right Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Verification Button */}
+            {(isLoginPage || isRegisterPage) && (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group max-md:hidden"
+              >
+                <Link href="/verify-email">
+                  <ShieldCheck className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                  <span className="font-bold max-w-0 md:max-w-[100px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                    Verification
+                  </span>
+                </Link>
+              </Button>
+            )}
+
+            {/* Back to Login Button */}
+            {isForgotPasswordPage && (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group max-md:hidden"
+              >
+                <Link href="/login">
+                  <ChevronLeft className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                  <span className="font-bold max-w-0 md:max-w-[100px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                    Back to Login
+                  </span>
+                </Link>
+              </Button>
+            )}
+
+            {/* Homepage button - takes visitors back to the HelpLift homepage. */}
+            {!isNeedsPage && !isGiftLibraryPage && !isOrganizationsPage && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${
+                    isAuthView ? "hidden" : "hidden md:flex"
+                  } gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group`}
+                  asChild
+                >
+                  <a href="/">
+                    <Home className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                    <span className="font-bold max-w-0 md:max-w-[120px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                      Homepage
+                    </span>
+                  </a>
+                </Button>
+
+                <div
+                  className={`h-6 w-[1px] bg-border mx-2 ${
+                    isAuthView ? "hidden" : "hidden md:block"
+                  }`}
+                />
+              </>
+            )}
+
+            {dashboardPath ? (
+              /* Already signed in - one link back to their dashboard instead of Log In/Register. */
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(dashboardPath)}
+                data-tip="You're signed in - go to your dashboard"
+                className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group max-md:hidden"
+              >
+                <LayoutDashboard className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                <span className="font-bold max-w-0 md:max-w-[140px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                  Dashboard
+                </span>
+              </Button>
+            ) : (
+              <>
+                {/* Log In Button */}
+                {!isLoginPage && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group max-md:hidden"
+                    onClick={handleLoginRedirect}
+                  >
+                    <LogIn className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                    <span className="font-bold max-w-0 md:max-w-[100px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                      Log In
+                    </span>
+                  </Button>
+                )}
+
+                {/* Register Button */}
+                {!isRegisterPage && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push("/register")}
+                    className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group max-md:hidden"
+                  >
+                    <UserPlus className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                    <span className="font-bold max-w-0 md:max-w-[100px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                      Register
+                    </span>
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* Home Button */}
+            {(isLoginPage || isRegisterPage || isVerifyPage || isNeedsPage || isGiftLibraryPage || isOrganizationsPage) && (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-2 md:px-4 transition-all overflow-hidden group max-md:hidden"
+              >
+                <Link href="/">
+                  <Home className="w-7 h-7 md:w-4 md:h-4 shrink-0" />
+                  <span className="font-bold max-w-0 md:max-w-[100px] inline-block transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden">
+                    Home
+                  </span>
+                </Link>
+              </Button>
+            )}
+
+            {/* Phones: page links and account buttons live in this menu. */}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(open => !open)}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+              className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 dark:bg-blue-600 text-white"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        {menuOpen && (
+          <div className="md:hidden bg-background/95 backdrop-blur-xl px-4 pb-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+            <nav className="grid grid-cols-2 gap-1">
+              {[
+                { href: "/needs", label: "Browse Needs", icon: HeartHandshake, active: isNeedsPage },
+                { href: "/gift-library", label: "Gift Library", icon: Gift, active: isGiftLibraryPage },
+                { href: "/organizations", label: "Organizations", icon: Building2, active: isOrganizationsPage },
+                { href: "/", label: "Home", icon: Home, active: false },
+                ...((isLoginPage || isRegisterPage) ? [{ href: "/verify-email", label: "Verification", icon: ShieldCheck, active: false }] : []),
+                ...(isForgotPasswordPage ? [{ href: "/login", label: "Back to Login", icon: ChevronLeft, active: false }] : []),
+              ].map(({ href, label, icon: Icon, active }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-2 rounded px-3 py-3 text-sm font-bold ${active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" /> {label}
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-2 grid gap-2">
+              {dashboardPath ? (
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); router.push(dashboardPath) }}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-bold text-white"
+                >
+                  <LayoutDashboard className="h-4 w-4" /> My Dashboard
+                </button>
+              ) : (
+                <>
+                  {!isLoginPage && (
+                    <button
+                      type="button"
+                      onClick={() => { setMenuOpen(false); handleLoginRedirect() }}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-bold text-white"
+                    >
+                      <LogIn className="h-4 w-4" /> Log In
+                    </button>
+                  )}
+                  {!isRegisterPage && (
+                    <button
+                      type="button"
+                      onClick={() => { setMenuOpen(false); router.push("/register") }}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-slate-900/5 dark:bg-white/10 px-4 py-3 text-sm font-bold text-foreground"
+                    >
+                      <UserPlus className="h-4 w-4" /> Register
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+    </>
+  )
+}

@@ -1,0 +1,167 @@
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
+
+type UserRole = "giver" | "organization" | "admin"
+
+const roleHome: Record<UserRole, string> = {
+  giver: "/givers-dashboard",
+  organization: "/organisation-dashboard",
+  admin: "/admin-dashboard",
+}
+
+const protectedRoutes: { prefix: string; roles?: UserRole[] }[] = [
+  { prefix: "/givers-dashboard", roles: ["giver"] },
+  { prefix: "/organisation-dashboard", roles: ["organization"] },
+  { prefix: "/admin-dashboard", roles: ["admin"] },
+  { prefix: "/profile" },
+  { prefix: "/suspended" },
+  { prefix: "/pending-verification" },
+]
+
+// Every non-"approved" state — an org waiting on its first review, waiting on
+// a resubmission, or turned down — is gated the same way until an admin acts.
+async function isUnverifiedOrganization(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string
+) {
+  // Resolved through membership so team members (managers/viewers) are gated
+  // by their organization's status the same way the owner is.
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organizations(verification_status)")
+    .eq("profile_id", userId)
+    .maybeSingle()
+  const orgField = (membership as any)?.organizations
+  const org = Array.isArray(orgField) ? orgField[0] : orgField
+  return !!org && org.verification_status !== "approved"
+}
+
+// Platform Settings > Maintenance mode blocks the whole site for everyone
+// except a signed-in admin — /admin-login and /maintenance itself always stay
+// reachable (so an admin can sign in and turn it back off, and so the block
+// page itself doesn't redirect to itself).
+const MAINTENANCE_BYPASS = ["/admin-login", "/maintenance"]
+
+export async function proxy(request: NextRequest) {
+  let response = NextResponse.next({ request })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    }
+  )
+
+  // getClaims() checks the sign-in token locally when the project signs tokens
+  // with asymmetric keys (falling back to asking Supabase otherwise), instead
+  // of a round trip to the auth server on every page - which was slow (~1s)
+  // and, with everything else, hit Supabase's auth rate limit. Only the
+  // user's id is needed here.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
+  const pathname = request.nextUrl.pathname
+
+  if (!MAINTENANCE_BYPASS.includes(pathname)) {
+    let isAdmin = false
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+      isAdmin = profile?.role === "admin"
+    }
+    if (!isAdmin) {
+      const { data: setting } = await supabase.from("platform_settings").select("value").eq("key", "maintenance_mode").maybeSingle()
+      if ((setting?.value as any)?.enabled) {
+        return NextResponse.redirect(new URL("/maintenance", request.url))
+      }
+    }
+  }
+
+  const matchedRoute = protectedRoutes.find((route) => pathname.startsWith(route.prefix))
+
+  if (matchedRoute && !user) {
+    const loginUrl = new URL("/login", request.url)
+    loginUrl.searchParams.set("redirectTo", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  if (user && matchedRoute) {
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+    const role = profile?.role as UserRole | undefined
+    if (!role) return NextResponse.redirect(new URL("/login", request.url))
+    if (profile?.suspended && pathname !== "/suspended") {
+      return NextResponse.redirect(new URL("/suspended", request.url))
+    }
+    if (matchedRoute.roles && !matchedRoute.roles.includes(role)) {
+      return NextResponse.redirect(new URL(roleHome[role], request.url))
+    }
+    // Google/LinkedIn/Microsoft are sign-in only. An unfinished account a
+    // provider created for someone who never registered is normally deleted at
+    // sign-in (app/auth/callback); if one is ever still signed in, remove it.
+    if ((role === "giver" || role === "organization") && profile?.registration_complete === false) {
+      return NextResponse.redirect(new URL("/auth/unfinished", request.url))
+    }
+    if (
+      role === "organization" &&
+      !profile?.suspended &&
+      pathname.startsWith("/organisation-dashboard") &&
+      (await isUnverifiedOrganization(supabase, user.id))
+    ) {
+      return NextResponse.redirect(new URL("/pending-verification", request.url))
+    }
+  }
+
+  if (user && pathname === "/suspended") {
+    const { data: profile } = await supabase.from("profiles").select("role, suspended").eq("id", user.id).single()
+    const role = profile?.role as UserRole | undefined
+    if (role && !profile?.suspended) return NextResponse.redirect(new URL(roleHome[role], request.url))
+  }
+
+  if (user && pathname === "/pending-verification") {
+    const { data: profile } = await supabase.from("profiles").select("role, suspended").eq("id", user.id).single()
+    const role = profile?.role as UserRole | undefined
+    if (role !== "organization") return NextResponse.redirect(new URL(role ? roleHome[role] : "/login", request.url))
+    if (profile?.suspended) return NextResponse.redirect(new URL("/suspended", request.url))
+    if (!(await isUnverifiedOrganization(supabase, user.id))) {
+      return NextResponse.redirect(new URL(roleHome.organization, request.url))
+    }
+  }
+
+  // A suspended or not-yet-approved user is left alone here (not bounced to
+  // /suspended or /pending-verification) — they're still logged in as that
+  // gated account, but /login and /register need to stay reachable so they
+  // can sign into a different account or register a new one instead of
+  // being stuck. Only a fully-cleared user gets redirected to their home.
+  if (user && ["/login", "/register"].includes(pathname)) {
+    const { data: profile } = await supabase.from("profiles").select("role, suspended").eq("id", user.id).single()
+    const role = profile?.role as UserRole | undefined
+    if (role && !profile?.suspended) {
+      const stillGated = role === "organization" && (await isUnverifiedOrganization(supabase, user.id))
+      if (!stillGated) return NextResponse.redirect(new URL(roleHome[role], request.url))
+    }
+  }
+
+  return response
+}
+
+export const config = {
+  matcher: [
+    "/",
+    "/needs/:path*",
+    "/gift-library",
+    "/organizations/:path*",
+    "/givers-dashboard/:path*",
+    "/organisation-dashboard/:path*",
+    "/admin-dashboard/:path*",
+    "/profile/:path*",
+    "/suspended",
+    "/pending-verification",
+    "/login",
+    "/register/:path*",
+  ],
+}

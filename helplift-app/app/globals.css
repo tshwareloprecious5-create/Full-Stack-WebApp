@@ -1,0 +1,1024 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Make Tailwind's `dark:` utility respond to next-themes' `.dark` class on
+   <html> (attribute="class" in ThemeProvider), not just OS preference.
+   Without this, `dark:` classes only ever matched prefers-color-scheme,
+   which is why toggling the in-app theme switch only changed the parts of
+   the UI that read CSS variables (e.g. the navbar) and left every page that
+   uses literal Tailwind colors (bg-white, text-slate-900, etc.) unchanged. */
+@custom-variant dark (&:is(.dark, .dark *));
+
+/* Light mode colors (default) */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* Dark mode colors — applied only when next-themes adds the `.dark` class
+   to <html>. Previously these values were also assigned to a bare `:root`
+   selector, which meant every page was dark by default regardless of the
+   selected theme. */
+.dark {
+  --background: var(--scheme-deep, #0B1220);
+  --foreground: #ffffff;
+  --card: var(--scheme-surface, #121B2E);
+  --card-foreground: #ffffff;
+  --popover: var(--scheme-surface, #121B2E);
+  --popover-foreground: #ffffff;
+  --primary: #0a8fdc;
+  --primary-foreground: #ffffff;
+  --secondary: var(--scheme-raised, #1A2740);
+  --secondary-foreground: #ffffff;
+  --muted: var(--scheme-raised, #1A2740);
+  --muted-foreground: #aaaaaa;
+  --accent: var(--scheme-raised, #1A2740);
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #fecaca;
+  --border: var(--scheme-line, #233350);
+  --input: var(--scheme-line, #233350);
+  --ring: var(--scheme-line-strong, #2C3E63);
+  --chart-1: #0a8fdc;
+  --chart-2: #31a24c;
+  --chart-3: #e4163a;
+  --chart-4: #f02849;
+  --chart-5: #0a66c2;
+  --sidebar: var(--scheme-surface, #121B2E);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #0a8fdc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--scheme-raised, #1A2740);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--scheme-line, #233350);
+  --sidebar-ring: var(--scheme-line-strong, #2C3E63);
+}
+
+/* High-contrast mode - a third theme choice alongside light/dark (see
+   components/theme-toggle.tsx and the ThemeProvider's `themes` prop in
+   app/layout.tsx), for anyone who needs stronger contrast, regardless of
+   whether they'd otherwise prefer a light or dark background. Pure
+   black-on-white, thick high-visibility focus rings, and no reliance on
+   color alone to indicate state.
+
+   Every component built on the shared CSS variables below (shadcn's
+   Button/Card/Dialog/Input/etc., which use bg-background/text-foreground/
+   border-border rather than literal colors) gets full coverage for free.
+   The dashboards additionally use a lot of literal Tailwind colors
+   (bg-white, text-slate-500, dark:bg-[var(--scheme-surface, #121B2E)]...) that predate this mode;
+   the broad-strokes overrides after the variables catch the handful of
+   color combinations repeated the most often across this app, as a
+   pragmatic first pass - not an exhaustive guarantee on every literal
+   color everywhere. */
+.high-contrast {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: #000000;
+  --muted: #ffffff;
+  --muted-foreground: #000000;
+  --accent: #000000;
+  --accent-foreground: #ffffff;
+  --destructive: #b30000;
+  --destructive-foreground: #ffffff;
+  --border: #000000;
+  --input: #000000;
+  --ring: #0000ee;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #000000;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #000000;
+  --sidebar-ring: #0000ee;
+}
+
+/* Thick, unmistakable focus rings everywhere — the single highest-impact
+   change for keyboard navigation, and cheap to apply globally. */
+.high-contrast *:focus-visible {
+  outline: 3px solid #0000ee !important;
+  outline-offset: 2px !important;
+}
+
+/* Real <button>/<a> elements and shadcn's components already draw their own
+   focus-visible ring. A "row" standing in for one (role="button" tabIndex={0}
+   - see lib/keyboard.ts) usually has no styling of its own for it, so it
+   would otherwise fall back to whatever the browser does (sometimes nothing
+   visible against a rounded/bordered card). This guarantees every one of
+   those gets a clearly visible keyboard focus ring too, in every theme. */
+[role="button"]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.dark [role="button"]:focus-visible {
+  outline-color: #60a5fa;
+}
+
+/* Broad-strokes overrides for the literal (non-variable) color utilities
+   repeated the most throughout the dashboards. Only the LIGHT-mode literal
+   utilities need overriding here - next-themes applies exactly one class
+   name to <html> at a time (attribute="class"), so ".dark" and
+   ".high-contrast" never co-occur, which means every `dark:`-prefixed
+   utility is already inert (not matching anything) whenever high-contrast
+   is active; only its light-mode base utility is actually rendered. */
+.high-contrast body {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+.high-contrast .bg-white,
+.high-contrast .bg-slate-50,
+.high-contrast .bg-slate-100 {
+  background-color: #ffffff !important;
+}
+.high-contrast .text-slate-400,
+.high-contrast .text-slate-500,
+.high-contrast .text-slate-600 {
+  color: #000000 !important;
+}
+.high-contrast .border-slate-200,
+.high-contrast .border-slate-300 {
+  border-color: #000000 !important;
+}
+.high-contrast a,
+.high-contrast button {
+  text-underline-offset: 3px;
+}
+
+/* Fourth theme: a literal black-and-white mode - every color desaturated,
+   not just the specific Tailwind utility classes high-contrast targets
+   above. A single CSS filter on the whole page does this correctly and
+   completely (photos, avatars, chart fills, anything) in one line, where a
+   hand-maintained class list (the high-contrast approach) never could.
+   grayscale(1) alone only removes saturation - it keeps each color's
+   original lightness, so the dark theme's actual navy background
+   (#0B1220, not literal black) just becomes a muted dark grey. The added
+   contrast boost pushes darks toward black and lights toward white, so it
+   reads as genuinely black-and-white instead of "dark mode, less colorful". */
+html.grayscale {
+  filter: grayscale(1) contrast(1.3);
+}
+
+/* "Larger text" accessibility preference (see lib/font-size.ts, set from
+   Settings in the giver/organization dashboards) - scales the root
+   font-size so every rem-based Tailwind text utility (text-sm, text-base,
+   text-lg, ...) scales proportionally with it, with no changes needed to
+   any individual component. */
+html.font-size-large {
+  font-size: 125%; /* 16px base -> 20px */
+}
+html.font-size-larger {
+  font-size: 150%; /* 16px base -> 24px */
+}
+/* Phones: everything a touch smaller (15px base) so pages feel like a modern
+   mobile site - rem-based text and spacing scale with it. The "Larger text"
+   levels keep the same 1.25x / 1.5x steps on top. */
+@media (max-width: 767px) {
+  html { font-size: 93.75%; }
+  html.font-size-large { font-size: 117.1875%; }
+  html.font-size-larger { font-size: 140.625%; }
+}
+/* Sideways-scrolling rows (tabs, chips) without a visible scrollbar. */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Theme & fonts */
+@theme inline {
+  --font-sans: "Geist", "Geist Fallback";
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Base styling */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 1.25rem;
+}
+
+.dark .row {
+  border-color: var(--scheme-line, #233350);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #0f172a;
+  outline: none;
+  background: transparent;
+}
+
+.field:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.12);
+}
+
+.dark .field {
+  border-color: var(--scheme-line, #233350);
+  color: #f1f5f9;
+  background: #0f1729;
+}
+
+/* Flatter/tighter redesign, rolled out site-wide from an organization-
+   dashboard trial. Card/CardTitle/CardDescription's own share of this now
+   lives directly in components/ui/card.tsx (it's a real shadcn component,
+   so there was no need to fight it with CSS once the redesign was
+   approved everywhere); these two data-tip-targeted controls are plain
+   attribute selectors instead, so they stay here. */
+
+/* "Check grammar": plain text link, no chip/background. */
+[data-tip="Check grammar and spelling"] {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  font-weight: 400;
+}
+[data-tip="Check grammar and spelling"]:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+
+code, pre {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Native <select> dropdown popups are rendered by the browser/OS, not the
+   page — they don't inherit Tailwind's `dark:` text-color utilities the way
+   the closed select box does. Every <select> in the app uses light text
+   (meant for the page's own dark background) with no explicit <option>
+   styling, so every popup list was rendering near-white text on the
+   browser's default white popup background: readable when selected
+   (grey highlight), unreadable otherwise. This is the actual fix — set
+   explicitly, since option elements ignore `background: transparent`. */
+select {
+  color-scheme: light;
+}
+
+option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+.dark option {
+  background-color: var(--scheme-surface, #121B2E);
+  color: #f1f5f9;
+}
+
+/* A quick, visible press animation on every button in the app — most
+   buttons here are either the shared shadcn <Button> or a raw <button>
+   styled inline; targeting the native element covers both without touching
+   every call site individually. */
+button:not(:disabled) {
+  transition: transform 150ms ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+/* Hide scrollbars but keep scrolling */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbar but keep scrollable */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Justified long text (descriptions, policies, FAQ answers...). Phones keep
+   left-aligned text - justifying narrow columns leaves big gaps between
+   words. Words are never split across lines with a hyphen.
+   .text-justify-smart on one element, .justify-prose on a container (its
+   paragraphs and list items). */
+@media (min-width: 640px) {
+  .text-justify-smart,
+  .justify-prose p,
+  .justify-prose li {
+    text-align: justify;
+    text-justify: inter-word;
+    /* Never split a word with a hyphen - spacing between words absorbs the slack. */
+    -webkit-hyphens: none;
+    hyphens: none;
+  }
+}
+
+/* --- Homepage (app/page.tsx) ------------------------------------------------ */
+
+/* Sections fade and lift in as they scroll into view (components/reveal.tsx). */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(4px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), filter 0.8s ease-out;
+}
+.reveal.reveal-shown { opacity: 1; transform: none; filter: none; }
+
+/* Items in a .reveal-stagger list ripple in one after another once their
+   section has appeared. */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-shown .reveal-stagger > *,
+.reveal-shown.reveal-stagger > * { opacity: 1; transform: none; }
+.reveal-shown .reveal-stagger > *:nth-child(2) { transition-delay: 80ms; }
+.reveal-shown .reveal-stagger > *:nth-child(3) { transition-delay: 160ms; }
+.reveal-shown .reveal-stagger > *:nth-child(4) { transition-delay: 240ms; }
+.reveal-shown .reveal-stagger > *:nth-child(5) { transition-delay: 320ms; }
+.reveal-shown .reveal-stagger > *:nth-child(6) { transition-delay: 400ms; }
+.reveal-shown .reveal-stagger > *:nth-child(n + 7) { transition-delay: 480ms; }
+
+/* Section label icons pop as their section appears. */
+.reveal-shown .reveal-pop { animation: badge-pop 0.6s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* A light sweep across a button on hover. */
+.btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.75s ease;
+  pointer-events: none;
+}
+.btn-shine:hover::after { transform: translateX(120%); }
+
+/* Slowly drifting colour blobs behind the hero and call-to-action. */
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -30px) scale(1.08); }
+  66% { transform: translate(-30px, 20px) scale(0.95); }
+}
+.blob-drift { animation: blob-drift 18s ease-in-out infinite; }
+
+/* A faint dotted grid behind the hero, fading out at the edges. */
+.hero-grid {
+  background-image: radial-gradient(rgba(100, 116, 139, 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 30%, transparent 75%);
+}
+
+/* The heart on the Support The Platform banner beats softly. */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.18); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
+.heartbeat { animation: heartbeat 2.4s ease-in-out infinite; }
+
+/* Moving sheen across the gradient text in the hero heading. */
+@keyframes text-sheen {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.text-sheen { background-size: 200% auto; animation: text-sheen 6s linear infinite; }
+
+/* Dashboard greeting icon (components/time-greeting.tsx) bobs gently. */
+@keyframes greeting-float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-3px) rotate(-6deg); }
+}
+
+/* --- Badges (components/badges-panel.tsx) ---------------------------------
+   All of these are switched off by Reduce motion like every other animation
+   (see the reduce-motion rules further down). */
+
+/* Cards rise into place one after another (delay set per card). */
+@keyframes badge-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.badge-rise { animation: badge-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* A light sweep across earned badge icons every few seconds. */
+@keyframes badge-shine {
+  0%, 70% { transform: translateX(-130%) skewX(-20deg); }
+  100% { transform: translateX(230%) skewX(-20deg); }
+}
+.badge-shine { position: relative; overflow: hidden; }
+.badge-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: badge-shine 4.5s ease-in-out infinite;
+  animation-delay: var(--shine-delay, 0s);
+  pointer-events: none;
+}
+
+/* The badge icon "pops" when its details open. */
+@keyframes badge-pop {
+  0% { transform: scale(0.3) rotate(-25deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.badge-pop { animation: badge-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Locked badges give a little shake on hover. */
+@keyframes badge-wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(12deg); }
+}
+.group:hover .badge-wiggle { animation: badge-wiggle 0.4s ease-in-out 2; }
+
+/* Confetti for an earned badge (each piece gets its own --x/--y/--r). */
+@keyframes badge-confetti {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  100% { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; }
+}
+.badge-confetti { animation: badge-confetti 1.1s cubic-bezier(0.15, 0.6, 0.35, 1) both; }
+
+/* The badge you're closest to earning glows softly. */
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2); }
+}
+.badge-glow { animation: badge-glow 2.4s ease-in-out infinite; }
+
+/* Moving highlight along progress bars. */
+.badge-progress-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(225, 225, 225, 0.1) 0%,
+    rgba(225, 225, 225, 0.3) 50%,
+    rgba(225, 225, 225, 0.1) 100%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Homepage needs map (components/needs-map.tsx) */
+.leaflet-container {
+  font-family: inherit;
+}
+.dark .helplift-map-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}
+.helplift-map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.helplift-map-popup button {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+.helplift-map-popup button:hover {
+  text-decoration: underline;
+}
+
+.helplift-map-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.helplift-map-tooltip img {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Reduce motion (Settings -> Reduce motion, lib/reduce-motion.ts, or the
+   device's own setting): animations and transitions off site-wide. Loading
+   spinners keep turning so it's still clear something is loading. */
+html.reduce-motion *:not(.animate-spin),
+html.reduce-motion *:not(.animate-spin)::before,
+html.reduce-motion *:not(.animate-spin)::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin),
+  *:not(.animate-spin)::before,
+  *:not(.animate-spin)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Phones: when a page has the bottom section bar (components/mobile-section-nav.tsx),
+   floating buttons and toasts sit above it instead of on top of it. */
+@media (max-width: 767px) {
+  body:has([data-mobile-bottom-nav]) [data-above-mobile-nav] {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 767px) {
+  body[data-mobile-sheet-open] [data-above-mobile-nav] {
+    display: none;
+  }
+}
+
+/* Phones: list rows stack - details on top at full width, actions underneath -
+   instead of squeezing the text into a narrow column beside the buttons. */
+@media (max-width: 767px) {
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.875rem;
+  }
+  .row > * {
+    min-width: 0;
+  }
+  /* Short rows (e.g. users) stay on one line: details left, badge right. */
+  .row.row-compact {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* Phones: a dashboard's header buttons become one toolbar - icons spread evenly
+   across the full width, each on its own soft circle (no panel or outlines), with
+   a tap animation. Desktop
+   keeps its normal buttons. */
+@media (max-width: 767px) {
+  .mobile-toolbar {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 4px;
+  }
+  /* No panel or outlines: each icon sits on its own soft circle so it stands out. */
+  .mobile-toolbar button,
+  .mobile-toolbar a {
+    border-width: 0;
+    background-color: #ffffff;
+    box-shadow: none;
+    border-radius: 9999px;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    padding-left: 0;
+    padding-right: 0;
+    justify-content: center;
+    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dark .mobile-toolbar button,
+  .dark .mobile-toolbar a {
+    background-color: var(--scheme-raised, #1A2740);
+    box-shadow: none;
+  }
+  .mobile-toolbar button:active,
+  .mobile-toolbar a:active {
+    transform: scale(0.86);
+    background-color: color-mix(in srgb, var(--color-blue-600) 14%, transparent);
+  }
+  .mobile-toolbar button[aria-expanded="true"],
+  .mobile-toolbar button[aria-pressed="true"] {
+    background-color: color-mix(in srgb, var(--color-blue-600) 12%, transparent);
+    color: var(--color-blue-600);
+  }
+  .mobile-toolbar [aria-label="Sign out"] {
+    color: #dc2626;
+  }
+  .dark .mobile-toolbar [aria-label="Sign out"] {
+    color: #f87171;
+  }
+}
+
+/* One delete/remove button style for the whole site: a red bin icon with no
+   border; a soft red circle and a small shake on hover, a press on tap.
+   Add btn-delete--label for a button with text. */
+.btn-delete {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2rem;
+  min-width: 2rem;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: #ef4444;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.btn-delete:hover,
+.btn-delete:focus-visible {
+  background: rgb(239 68 68 / 0.1);
+  color: #dc2626;
+}
+.btn-delete:hover svg {
+  animation: delete-shake 0.45s ease;
+}
+.btn-delete:active {
+  transform: scale(0.88);
+}
+.btn-delete:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.dark .btn-delete {
+  color: #f87171;
+}
+.dark .btn-delete:hover,
+.dark .btn-delete:focus-visible {
+  background: rgb(248 113 113 / 0.14);
+  color: #fca5a5;
+}
+.btn-delete--label {
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+@keyframes delete-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg); }
+  60% { transform: rotate(9deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-delete:hover svg { animation: none; }
+}
+
+/* Card action buttons (approve, reject, close, edit...): rounded pills with no
+   borders, a small lift on hover and a press on tap. Main actions have a solid
+   gradient; secondary ones a soft tint. */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, filter 0.2s ease;
+}
+.btn-pill:hover { transform: translateY(-1px); }
+.btn-pill:active { transform: scale(0.95); }
+.btn-pill:disabled { opacity: 0.55; pointer-events: none; }
+.btn-pill svg { width: 0.875rem; height: 0.875rem; }
+
+.btn-pill--neutral { background: #f1f5f9; color: #334155; }
+.btn-pill--neutral:hover { background: #e2e8f0; }
+.dark .btn-pill--neutral { background: var(--scheme-raised, #1A2740); color: #cbd5e1; }
+.dark .btn-pill--neutral:hover { background: var(--scheme-line, #233350); }
+
+.btn-pill--red { background: rgb(239 68 68 / 0.1); color: #dc2626; }
+.btn-pill--red:hover { background: rgb(239 68 68 / 0.18); }
+.dark .btn-pill--red { background: rgb(248 113 113 / 0.12); color: #f87171; }
+.dark .btn-pill--red:hover { background: rgb(248 113 113 / 0.2); }
+
+.btn-pill--amber { background: rgb(245 158 11 / 0.12); color: #b45309; }
+.btn-pill--amber:hover { background: rgb(245 158 11 / 0.2); }
+.dark .btn-pill--amber { background: rgb(251 191 36 / 0.12); color: #fbbf24; }
+.dark .btn-pill--amber:hover { background: rgb(251 191 36 / 0.2); }
+
+.btn-pill--green,
+.btn-pill--blue,
+.btn-pill--red-solid,
+.btn-pill--amber-solid { color: #ffffff; }
+.btn-pill--green { background: linear-gradient(135deg, #10b981, #059669); }
+.btn-pill--blue { background: linear-gradient(135deg, var(--color-blue-600), var(--color-indigo-600)); }
+.btn-pill--red-solid { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.btn-pill--amber-solid { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.btn-pill--green:hover,
+.btn-pill--blue:hover,
+.btn-pill--red-solid:hover,
+.btn-pill--amber-solid:hover { filter: brightness(1.06); }
+
+.btn-pill--dark-solid { background: #0f172a; color: #ffffff; }
+.dark .btn-pill--dark-solid { background: #f1f5f9; color: #0f172a; }
+.btn-pill--green-soft { background: rgb(16 185 129 / 0.12); color: #047857; }
+.btn-pill--green-soft:hover { background: rgb(16 185 129 / 0.2); }
+.dark .btn-pill--green-soft { background: rgb(52 211 153 / 0.12); color: #34d399; }
+.btn-pill--blue-soft { background: color-mix(in srgb, var(--color-blue-600) 10%, transparent); color: var(--color-blue-700); }
+.btn-pill--blue-soft:hover { background: color-mix(in srgb, var(--color-blue-600) 18%, transparent); }
+.dark .btn-pill--blue-soft { background: color-mix(in srgb, var(--color-blue-400) 12%, transparent); color: var(--color-blue-400); }
+
+/* Admin dashboard, light themes: more readable text. Only text colours change -
+   the pale greys used for secondary text, labels and inactive tabs are one
+   step darker. Nothing else (backgrounds, borders, layout) is touched. */
+:is(.light, .grayscale) .admin-readable .text-slate-400 { color: #64748b; }
+:is(.light, .grayscale) .admin-readable .text-slate-500,
+:is(.light, .grayscale) .admin-readable .text-muted-foreground { color: #475569; }
+:is(.light, .grayscale) .admin-readable .text-slate-600 { color: #334155; }
+:is(.light, .grayscale) .admin-readable [data-slot="tabs-trigger"]:not([data-state="active"]) { color: #475569; }
+:is(.light, .grayscale) .admin-readable :is(input, textarea)::placeholder { color: #64748b; }
+
+/* Dashboard stat icons (StatCard on all three dashboards, and the phone
+   "waiting" chips): pop in when the page loads, then float gently, each one a
+   beat apart so they don't move in unison; a playful wiggle on hover. Reduce
+   motion (Settings or the device) switches it off via the rules above. */
+.stat-icon {
+  animation:
+    stat-icon-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    stat-icon-float 3.6s ease-in-out 0.6s infinite;
+  will-change: transform;
+}
+:nth-child(2) > .stat-icon { animation-delay: 0.08s, 1.1s; }
+:nth-child(3) > .stat-icon { animation-delay: 0.16s, 1.6s; }
+:nth-child(4) > .stat-icon { animation-delay: 0.24s, 2.1s; }
+:nth-child(5) > .stat-icon { animation-delay: 0.32s, 2.6s; }
+:nth-child(6) > .stat-icon { animation-delay: 0.4s, 3.1s; }
+:nth-child(7) > .stat-icon { animation-delay: 0.48s, 3.6s; }
+[data-stat-card]:hover .stat-icon svg,
+button:hover > .stat-icon svg {
+  animation: stat-icon-wiggle 0.6s ease-in-out;
+}
+@keyframes stat-icon-pop {
+  0% { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes stat-icon-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.06); }
+}
+@keyframes stat-icon-wiggle {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-14deg) scale(1.1); }
+  45% { transform: rotate(10deg) scale(1.1); }
+  70% { transform: rotate(-6deg); }
+}
+
+/* Dashboard colour schemes (Settings -> User interface -> Colour scheme,
+   lib/color-scheme.ts). Default has no attribute. Each named scheme restyles
+   the whole dashboard: accents (Tailwind blue/indigo), neutral greys (slate),
+   the page background and the dark-mode surfaces. Success green, warning
+   amber and danger red are untouched. */
+html[data-scheme="forest"] {
+  --color-blue-50: #f0fdfa; --color-blue-100: #ccfbf1; --color-blue-200: #99f6e4; --color-blue-300: #5eead4; --color-blue-400: #2dd4bf; --color-blue-500: #14b8a6; --color-blue-600: #0d9488; --color-blue-700: #0f766e; --color-blue-800: #115e59; --color-blue-900: #134e4a; --color-blue-950: #042f2e;
+  --color-indigo-50: #ecfdf5; --color-indigo-100: #d1fae5; --color-indigo-200: #a7f3d0; --color-indigo-300: #6ee7b7; --color-indigo-400: #34d399; --color-indigo-500: #10b981; --color-indigo-600: #059669; --color-indigo-700: #047857; --color-indigo-800: #065f46; --color-indigo-900: #064e3b; --color-indigo-950: #022c22;
+  --color-slate-50: #f4f8f5; --color-slate-100: #e6eee8; --color-slate-200: #d2ddd5; --color-slate-300: #b1c2b6; --color-slate-400: #86998c; --color-slate-500: #627568; --color-slate-600: #4b5d51; --color-slate-700: #3a4a3f; --color-slate-800: #26342b; --color-slate-900: #17221b; --color-slate-950: #0c150f;
+  --scheme-page: #F1F6F2;
+  --scheme-deep: #0A1712; --scheme-surface: #10221A; --scheme-raised: #172E23;
+  --scheme-line: #21402F; --scheme-line-strong: #2D553F; --scheme-nav: #0D1C16;
+}
+html[data-scheme="forest"].dark { --primary: #14b8a6; --sidebar-primary: #14b8a6; }
+html[data-scheme="sunset"] {
+  --color-blue-50: #fff7ed; --color-blue-100: #ffedd5; --color-blue-200: #fed7aa; --color-blue-300: #fdba74; --color-blue-400: #fb923c; --color-blue-500: #f97316; --color-blue-600: #ea580c; --color-blue-700: #c2410c; --color-blue-800: #9a3412; --color-blue-900: #7c2d12; --color-blue-950: #431407;
+  --color-indigo-50: #fff1f2; --color-indigo-100: #ffe4e6; --color-indigo-200: #fecdd3; --color-indigo-300: #fda4af; --color-indigo-400: #fb7185; --color-indigo-500: #f43f5e; --color-indigo-600: #e11d48; --color-indigo-700: #be123c; --color-indigo-800: #9f1239; --color-indigo-900: #881337; --color-indigo-950: #4c0519;
+  --color-slate-50: #faf7f4; --color-slate-100: #f3ede7; --color-slate-200: #e5dcd3; --color-slate-300: #d0c3b6; --color-slate-400: #a89686; --color-slate-500: #857368; --color-slate-600: #685950; --color-slate-700: #51453e; --color-slate-800: #362d28; --color-slate-900: #221b17; --color-slate-950: #14100c;
+  --scheme-page: #FBF6F1;
+  --scheme-deep: #17110D; --scheme-surface: #211812; --scheme-raised: #2D2119;
+  --scheme-line: #3D2D22; --scheme-line-strong: #523C2D; --scheme-nav: #1C1510;
+}
+html[data-scheme="sunset"].dark { --primary: #f97316; --sidebar-primary: #f97316; }
+html[data-scheme="midnight"] {
+  --color-blue-50: #f5f3ff; --color-blue-100: #ede9fe; --color-blue-200: #ddd6fe; --color-blue-300: #c4b5fd; --color-blue-400: #a78bfa; --color-blue-500: #8b5cf6; --color-blue-600: #7c3aed; --color-blue-700: #6d28d9; --color-blue-800: #5b21b6; --color-blue-900: #4c1d95; --color-blue-950: #2e1065;
+  --color-indigo-50: #fdf4ff; --color-indigo-100: #fae8ff; --color-indigo-200: #f5d0fe; --color-indigo-300: #f0abfc; --color-indigo-400: #e879f9; --color-indigo-500: #d946ef; --color-indigo-600: #c026d3; --color-indigo-700: #a21caf; --color-indigo-800: #86198f; --color-indigo-900: #701a75; --color-indigo-950: #4a044e;
+  --color-slate-50: #f8f7fc; --color-slate-100: #eeecf7; --color-slate-200: #dcd8ec; --color-slate-300: #c0b9d8; --color-slate-400: #9790b5; --color-slate-500: #726a91; --color-slate-600: #585175; --color-slate-700: #443e5d; --color-slate-800: #2c2740; --color-slate-900: #1b172a; --color-slate-950: #0f0c1a;
+  --scheme-page: #F6F4FB;
+  --scheme-deep: #110D1F; --scheme-surface: #19142C; --scheme-raised: #231C3B;
+  --scheme-line: #30274F; --scheme-line-strong: #403466; --scheme-nav: #150F26;
+}
+html[data-scheme="midnight"].dark { --primary: #8b5cf6; --sidebar-primary: #8b5cf6; }
+/* Fixed dashboard colours (arbitrary Tailwind values) -> the scheme's own. */
+html[data-scheme]:not(.dark) .bg-\[\#FAFAFA\] { background-color: var(--scheme-page); }
+html[data-scheme].dark .dark\:bg-\[\#0B1220\] { background-color: var(--scheme-deep); }
+html[data-scheme] .bg-\[\#0B1220\]\/60 { background-color: color-mix(in srgb, var(--scheme-deep) 60%, transparent); }
+html[data-scheme].dark .dark\:ring-\[\#0B1220\] { --tw-ring-color: var(--scheme-deep); }
+html[data-scheme].dark .dark\:bg-\[\#121B2E\],
+html[data-scheme].dark .dark\:bg-\[\#111a2e\] { background-color: var(--scheme-surface); }
+html[data-scheme].dark .dark\:bg-\[\#121B2E\]\/60 { background-color: color-mix(in srgb, var(--scheme-surface) 60%, transparent); }
+html[data-scheme].dark .dark\:bg-\[\#1A2740\],
+html[data-scheme].dark .dark\:hover\:bg-\[\#1A2740\]:hover { background-color: var(--scheme-raised); }
+html[data-scheme].dark .dark\:hover\:bg-\[\#1A2740\]\/40:hover { background-color: color-mix(in srgb, var(--scheme-raised) 40%, transparent); }
+html[data-scheme].dark .dark\:hover\:bg-\[\#233350\]:hover { background-color: var(--scheme-line); }
+html[data-scheme].dark .dark\:border-\[\#233350\] { border-color: var(--scheme-line); }
+html[data-scheme].dark .dark\:border-\[\#2C3E63\],
+html[data-scheme].dark .dark\:hover\:border-\[\#2C3E63\]:hover { border-color: var(--scheme-line-strong); }
+html[data-scheme].dark .dark\:bg-\[\#0E1729\] { background-color: var(--scheme-nav); }
+html[data-scheme].dark .dark\:bg-\[\#0E1729\]\/95 { background-color: color-mix(in srgb, var(--scheme-nav) 95%, transparent); }
+
+/* Every icon across the app (lucide icons) stays still and animates only when
+   hovered - the icon itself, or the button, link or label it sits in - with
+   the stat icons' wiggle. (The dashboard stat tiles keep their pop-in and
+   float; see .stat-icon.) Spinners are left alone. Reduce motion (Settings or
+   the device) switches it off. */
+svg.lucide:not(.animate-spin):hover,
+:is(button, a, [role="button"], label):hover > svg.lucide:not(.animate-spin),
+:is(button, a, [role="button"], label):hover > span > svg.lucide:not(.animate-spin) {
+  animation: stat-icon-wiggle 0.6s ease-in-out;
+}
+
+/* Dashboard header buttons (.mobile-toolbar): besides the hover wiggle, the
+   icon also plays it when pressed (components/icon-click-animation.tsx adds
+   "icon-clicked"). Reduce motion still switches it off. */
+.mobile-toolbar svg.lucide.icon-clicked {
+  animation-name: stat-icon-wiggle !important;
+  animation-duration: 0.6s;
+  animation-timing-function: ease-in-out;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+}
+/* Icon-only header buttons are circles, like Refresh, Home and Feedback. */
+.mobile-toolbar .h-9.w-9 {
+  border-radius: 9999px;
+}
+
+/* Desktop dashboard header buttons (.mobile-toolbar), one look on every
+   dashboard: no outlines, softly rounded and the same height. The main action
+   keeps its colour (Pledge a gift, Post a need, Announce), More and Live
+   activity sit on a soft shade, the utility icons are plain until hovered, and
+   Sign out stays solid. Phones keep their own toolbar style (above). */
+@media (min-width: 768px) {
+  .mobile-toolbar {
+    gap: 0.375rem;
+  }
+  .mobile-toolbar :is(button, a) {
+    border-width: 0;
+    border-radius: 0.5rem;
+  }
+  .mobile-toolbar :is(button, a):not(.h-9) {
+    height: 2.25rem;
+    padding-inline: 1rem;
+    font-weight: 700;
+  }
+  /* Utility icons (notifications, refresh, home, settings): plain. */
+  .mobile-toolbar :is(button, a).h-9.w-9 {
+    background-color: transparent;
+    box-shadow: none;
+    border-radius: 0.5rem;
+    color: var(--color-slate-600);
+  }
+  .mobile-toolbar :is(button, a).h-9.w-9:hover {
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-900);
+  }
+  .dark .mobile-toolbar :is(button, a).h-9.w-9 {
+    color: var(--color-slate-300);
+  }
+  .dark .mobile-toolbar :is(button, a).h-9.w-9:hover {
+    background-color: var(--scheme-raised, #1A2740);
+    color: #ffffff;
+  }
+  /* Secondary buttons (More, Live activity): a soft shade. */
+  .mobile-toolbar :is(button, a):is([class*="bg-white"], [data-tour="live-activity"]):not([aria-label="Sign out"]):not([aria-pressed="true"]):not(.h-9) {
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-700);
+  }
+  .mobile-toolbar :is(button, a):is([class*="bg-white"], [data-tour="live-activity"]):not([aria-label="Sign out"]):not([aria-pressed="true"]):not(.h-9):hover {
+    background-color: var(--color-slate-200);
+  }
+  .dark .mobile-toolbar :is(button, a):is([class*="bg-white"], [data-tour="live-activity"]):not([aria-label="Sign out"]):not([aria-pressed="true"]):not(.h-9) {
+    background-color: var(--scheme-raised, #1A2740);
+    color: var(--color-slate-200);
+  }
+  .dark .mobile-toolbar :is(button, a):is([class*="bg-white"], [data-tour="live-activity"]):not([aria-label="Sign out"]):not([aria-pressed="true"]):not(.h-9):hover {
+    background-color: var(--scheme-line, #233350);
+  }
+}
